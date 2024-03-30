@@ -9,6 +9,7 @@ services:
       - "1025:1025"
 
   # Probably useless, but it's here just in case
+  # https://www.mailwizz.com/kb/using-redis-cache-mutexes/
   mailwizz-redis:
     image: redis:latest
     container_name: mailwizz-redis
