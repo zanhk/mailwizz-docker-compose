@@ -1,0 +1,71 @@
+version: '3.1'
+
+services:
+  mailwizz-mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mailwizz-mailhog
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+  # Probably useless, but it's here just in case
+  mailwizz-redis:
+    image: redis:latest
+    container_name: mailwizz-redis
+    ports:
+      - "6379:6379"
+
+  mailwizz-mysql:
+    image: mysql:latest
+    container_name: mailwizz-mysql
+    volumes:
+      - ./data:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=my_strong_password
+      - MYSQL_DATABASE=mailwizz
+      - MYSQL_USER=mailwizz
+      - MYSQL_PASSWORD=my_strong_password
+      - MYSQL_PORT=3306
+      - MYSQL_HOST=127.0.0.1
+
+  mailwizz-webserver:
+    image: nginx:latest
+    container_name: mailwizz-webserver
+    volumes:
+      - ./web:/var/www/web
+      - ./ssl:/etc/nginx/ssl
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "80:80"
+      - "443:443"
+    links:
+      - mailwizz-php
+
+  mailwizz-php:
+    build: .
+    container_name: mailwizz-php
+    volumes:
+      - ./web:/var/www/web
+    links:
+      - mailwizz-mysql
+      - mailwizz-mailhog
+      - mailwizz-redis
+    environment:
+      PHP_php5enmod: 'bcmath gd gmp intl ldap mbstring mysqli pcntl pdo_mysql zip'
+      PHP__post_max_size:  '128M'
+      PHP__upload_max_filesize:  '128M'
+      PHP__memory_limit:  '128M'
+
+  mailwizz-phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: mailwizz-phpmyadmin
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOST=mailwizz-mysql
+    restart: always
+    ports:
+      - "81:80"
+    volumes:
+      - /sessions
+    links:
+      - mailwizz-mysql
